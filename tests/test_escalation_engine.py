@@ -92,3 +92,24 @@ def test_ensure_today_doses_creates_scheduled_record_from_confirmed_plan():
     assert records[0].slot == "DINNER"
     assert records[0].status == DoseStatus.SCHEDULED
     assert records[0].due_at == datetime(2026, 7, 17, 18, 0)
+
+
+def test_apply_escalation_notifies_separately_for_different_dates():
+    repo = InMemoryRepository()
+    record_day1 = DoseRecord(
+        user_id="user-001", date="2026-07-17", med_id="med-001", slot="DINNER",
+        status=DoseStatus.REMINDED, due_at=datetime(2026, 7, 17, 18, 0),
+        reminded_at=datetime(2026, 7, 17, 18, 40),
+    )
+    repo.put_dose_record(record_day1)
+    apply_escalation(repo, record_day1, datetime(2026, 7, 17, 19, 0))
+
+    record_day2 = DoseRecord(
+        user_id="user-001", date="2026-07-18", med_id="med-001", slot="DINNER",
+        status=DoseStatus.REMINDED, due_at=datetime(2026, 7, 18, 18, 0),
+        reminded_at=datetime(2026, 7, 18, 18, 40),
+    )
+    repo.put_dose_record(record_day2)
+    apply_escalation(repo, record_day2, datetime(2026, 7, 18, 19, 0))
+
+    assert len(repo.list_notifications("user-001")) == 2

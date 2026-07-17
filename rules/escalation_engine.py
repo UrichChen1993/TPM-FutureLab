@@ -60,7 +60,7 @@ def apply_escalation(repo, record: DoseRecord, now: datetime) -> EscalationResul
     repo.put_dose_record(record)
 
     if result.notify_severity:
-        reason = f"dose_{record.med_id}_{record.slot}_{result.new_status.value}_{result.notify_severity}"
+        reason = f"dose_{record.date}_{record.med_id}_{record.slot}_{result.new_status.value}_{result.notify_severity}"
         already_notified = any(n.reason == reason for n in repo.list_notifications(record.user_id))
         if not already_notified:
             repo.put_notification(Notification(
