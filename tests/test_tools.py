@@ -40,6 +40,17 @@ def test_get_current_vitals_reports_risk_level():
     assert result["risk_level"] == "safe"
 
 
+def test_get_current_vitals_with_confirmed_danger_symptom_overrides_to_danger():
+    now = datetime(2026, 7, 17, 18, 0)
+    repo = make_repo_with_fixtures(now)
+    clock = SimClock.starting_at(now)
+    tools = build_tools(repo, clock, "user-001")
+
+    result = get_tool(tools, "get_current_vitals").invoke({"danger_symptom_confirmed": True})
+
+    assert result["risk_level"] == "danger"
+
+
 def test_get_medication_plan_returns_confirmed_only():
     now = datetime(2026, 7, 17, 18, 0)
     repo = make_repo_with_fixtures(now)
