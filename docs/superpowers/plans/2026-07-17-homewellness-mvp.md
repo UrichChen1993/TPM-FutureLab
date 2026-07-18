@@ -1483,7 +1483,9 @@ git commit -m "feat: LangChain tools bridging agent to rules and storage"
 
 **Interfaces:**
 - Consumes: `config.load_settings`, `agent.tools.build_tools`.
-- Produces: `build_llm()`, `build_agent_executor(repo, clock, user_id) -> AgentExecutor`. Task 12 (`app.py`) calls `build_agent_executor` and catches `ValueError` when `LLM_API_KEY` is unset.
+- Produces: `build_llm()`, `build_agent_executor(repo, clock, user_id) -> CompiledStateGraph`. Task 12 (`app.py`) calls `build_agent_executor` and catches `ValueError` when `LLM_API_KEY` is unset.
+
+**Implementation note (post-execution correction):** the installed `langchain` version (1.3.14) no longer ships `AgentExecutor`/`create_tool_calling_agent` — `from langchain.agents import AgentExecutor` raises `ImportError`. Step 5 below uses `langchain.agents.create_agent`, which returns a LangGraph `CompiledStateGraph` invoked as `graph.invoke({"messages": [...]})` → `result["messages"][-1]`, not the legacy `.invoke({"input":..., "chat_history":...})` → `result["output"]` shape. Task 12's `render_chat()` is written against this actual contract.
 
 **No live Gemini call in automated tests** — no API key available yet (confirmed with user). Test only the parts that don't need network: missing-key error and tool wiring. Full conversational behavior is verified manually once `LLM_API_KEY` is set (Task 13 runbook).
 
@@ -1569,25 +1571,17 @@ SYSTEM_PROMPT = """你是 HomeWellness Companion，一個居家關懷語音 Agen
 - [ ] **Step 5: Write `agent/agent.py`**
 
 ```python
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.agents import create_agent
 
 from agent.llm import build_llm
 from agent.prompts import SYSTEM_PROMPT
 from agent.tools import build_tools
 
 
-def build_agent_executor(repo, clock, user_id: str) -> AgentExecutor:
+def build_agent_executor(repo, clock, user_id: str):
     llm = build_llm()
     tools = build_tools(repo, clock, user_id)
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", SYSTEM_PROMPT),
-        MessagesPlaceholder("chat_history"),
-        ("human", "{input}"),
-        MessagesPlaceholder("agent_scratchpad"),
-    ])
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    return AgentExecutor(agent=agent, tools=tools, verbose=False)
+    return create_agent(model=llm, tools=tools, system_prompt=SYSTEM_PROMPT)
 ```
 
 - [ ] **Step 6: Run test to verify it passes**
@@ -1831,12 +1825,13 @@ def render_chat() -> None:
     user_input = st.chat_input("輸入長者的回應...")
     if user_input:
         st.session_state.messages.append(("human", user_input))
-        chat_history = [
-            ("human", content) if role == "human" else ("ai", content)
-            for role, content in st.session_state.messages[:-1]
+        history_messages = [
+            {"role": "user" if role == "human" else "assistant", "content": content}
+            for role, content in st.session_state.messages
         ]
-        result = st.session_state.agent_executor.invoke({"input": user_input, "chat_history": chat_history})
-        st.session_state.messages.append(("ai", result["output"]))
+        result = st.session_state.agent_executor.invoke({"messages": history_messages})
+        ai_content = result["messages"][-1].content
+        st.session_state.messages.append(("ai", ai_content))
         st.rerun()
 
 
