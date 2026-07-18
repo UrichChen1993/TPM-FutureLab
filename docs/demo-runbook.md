@@ -4,7 +4,7 @@
 
 1. `DATA_BACKEND=memory`，`.env` 中 `LLM_API_KEY` 留空。
 2. `streamlit run app.py`。
-3. 側欄會顯示 `Backend：memory` 及「LLM 尚未設定」提示；此時無法測試對話，
+3. 側欄會顯示 `Backend：memory`；對話區則會顯示「LLM 尚未設定」提示。此時無法測試對話，
    但可用側欄按鈕驗證模擬時間、IoT 事件與升級提醒的完整規則流程
    （對應 tests/test_escalation_engine.py 涵蓋的情境）。
 
