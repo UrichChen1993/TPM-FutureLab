@@ -51,7 +51,7 @@ def test_family_can_revise_ocr_candidate_before_confirmation():
         name="家屬核對後的藥名",
         dose="半顆",
         frequency="每日2次",
-        timing="BEFORE_MEAL",
+        timing="BEFORE_DINNER",
     )
 
     assert result.capture_source == "CAMERA"

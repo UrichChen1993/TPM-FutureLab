@@ -2,7 +2,14 @@ from datetime import datetime
 
 import boto3
 
-from domain.models import DoseRecord, IoTEvent, MedicationPlan, Notification, VitalReading
+from domain.models import (
+    DoseRecord,
+    IoTEvent,
+    MedicationPlan,
+    MedicationPlanAuditEvent,
+    Notification,
+    VitalReading,
+)
 from domain.states import DoseStatus
 from storage.base import Repository
 
@@ -27,6 +34,18 @@ class DynamoDBRepository(Repository):
                 valid_to=datetime.fromisoformat(item["valid_to"]) if item.get("valid_to") else None,
                 confirmed=item["confirmed"], created_by=item["created_by"],
                 updated_at=datetime.fromisoformat(item["updated_at"]),
+                frequency=item.get("frequency", ""),
+                fixed_times=tuple(item.get("fixed_times", [])),
+                active=item.get("active", True),
+                created_at=(
+                    datetime.fromisoformat(item["created_at"])
+                    if item.get("created_at") else None
+                ),
+                confirmed_by=item.get("confirmed_by"),
+                confirmed_at=(
+                    datetime.fromisoformat(item["confirmed_at"])
+                    if item.get("confirmed_at") else None
+                ),
             )
             for item in resp.get("Items", [])
         ]
@@ -39,7 +58,52 @@ class DynamoDBRepository(Repository):
             "valid_to": plan.valid_to.isoformat() if plan.valid_to else None,
             "confirmed": plan.confirmed, "created_by": plan.created_by,
             "updated_at": plan.updated_at.isoformat(),
+            "frequency": plan.frequency,
+            "fixed_times": list(plan.fixed_times),
+            "active": plan.active,
+            "created_at": plan.created_at.isoformat() if plan.created_at else None,
+            "confirmed_by": plan.confirmed_by,
+            "confirmed_at": plan.confirmed_at.isoformat() if plan.confirmed_at else None,
         })
+
+    def put_medication_audit_event(self, event: MedicationPlanAuditEvent) -> None:
+        self._table.put_item(Item={
+            "PK": self._pk(event.user_id),
+            "SK": f"MEDICATION_AUDIT#{event.occurred_at.isoformat()}#{event.event_id}",
+            "event_id": event.event_id,
+            "med_id": event.med_id,
+            "action": event.action,
+            "actor_id": event.actor_id,
+            "before": event.before,
+            "after": event.after,
+        })
+
+    def list_medication_audit_events(
+        self, user_id: str, med_id: str | None = None
+    ) -> list[MedicationPlanAuditEvent]:
+        resp = self._table.query(
+            KeyConditionExpression="PK = :pk AND begins_with(SK, :prefix)",
+            ExpressionAttributeValues={
+                ":pk": self._pk(user_id),
+                ":prefix": "MEDICATION_AUDIT#",
+            },
+        )
+        events = []
+        for item in resp.get("Items", []):
+            if med_id is not None and item["med_id"] != med_id:
+                continue
+            _, occurred_at, _ = item["SK"].split("#", 2)
+            events.append(MedicationPlanAuditEvent(
+                event_id=item["event_id"],
+                user_id=user_id,
+                med_id=item["med_id"],
+                action=item["action"],
+                actor_id=item["actor_id"],
+                occurred_at=datetime.fromisoformat(occurred_at),
+                before=item.get("before"),
+                after=item.get("after"),
+            ))
+        return events
 
     def put_vital(self, vital: VitalReading) -> None:
         self._table.put_item(Item={

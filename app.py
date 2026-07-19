@@ -4,6 +4,7 @@ import streamlit as st
 
 from agent.agent import build_agent_executor
 from config import load_settings
+from domain.states import NotificationSeverity
 from rules.escalation_engine import apply_escalation, ensure_today_doses
 from rules.proactive_engine import (
     maybe_trigger_proactive_message,
@@ -153,7 +154,7 @@ def render_sidebar() -> None:
     st.sidebar.write(f"Backend：{settings.data_backend}")
     if settings.data_backend == "dynamodb":
         st.sidebar.write(f"Region：{settings.aws_region}")
-    st.sidebar.write(f"模擬時間：{st.session_state.clock.now.isoformat()}")
+    sim_time_placeholder = st.sidebar.empty()
 
     st.sidebar.subheader("1. 藥單建檔")
     input_mode = st.sidebar.radio(
@@ -236,7 +237,7 @@ def render_sidebar() -> None:
                     revised_frequency = st.text_input(
                         "頻率", candidate.frequency, key=f"frequency-{widget_prefix}"
                     )
-                    timing_options = ("BEFORE_MEAL", "AFTER_MEAL", "FIXED_TIME")
+                    timing_options = tuple(TIMING_LABELS)
                     revised_timing = st.selectbox(
                         "服用時機",
                         timing_options,
@@ -325,7 +326,7 @@ def render_sidebar() -> None:
                 new_frequency = st.text_input("頻率", key=f"manual-frequency-{manual_prefix}")
                 new_timing = st.selectbox(
                     "服用時機",
-                    ("BEFORE_MEAL", "AFTER_MEAL", "FIXED_TIME"),
+                    tuple(TIMING_LABELS),
                     format_func=lambda value: TIMING_LABELS[value],
                     key=f"manual-timing-{manual_prefix}",
                 )
@@ -398,6 +399,8 @@ def render_sidebar() -> None:
         simulate_pillbox_event(st.session_state.repo, st.session_state.clock, USER_ID, "med-001", "DINNER")
         run_escalation_tick(st.session_state.repo, st.session_state.clock, USER_ID)
 
+    sim_time_placeholder.write(f"模擬時間：{st.session_state.clock.now.isoformat()}")
+
     st.sidebar.subheader("已確認用藥")
     confirmed_plans = [
         plan for plan in st.session_state.repo.get_medication_plans(USER_ID)
@@ -427,7 +430,8 @@ def render_sidebar() -> None:
 
     st.sidebar.subheader("家屬通知")
     for note in st.session_state.repo.list_notifications(USER_ID):
-        st.sidebar.warning(f"[{note.severity}] {note.message}（{note.occurred_at.isoformat()}）")
+        render = st.sidebar.error if note.severity == NotificationSeverity.HIGH.value else st.sidebar.warning
+        render(f"[{note.severity}] {note.message}（{note.occurred_at.isoformat()}）")
 
 
 def render_chat() -> None:

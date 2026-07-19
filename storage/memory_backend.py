@@ -1,20 +1,47 @@
-from domain.models import DoseRecord, IoTEvent, MedicationPlan, Notification, VitalReading
+from domain.models import (
+    DoseRecord,
+    IoTEvent,
+    MedicationPlan,
+    MedicationPlanAuditEvent,
+    Notification,
+    VitalReading,
+)
 from storage.base import Repository
 
 
 class InMemoryRepository(Repository):
     def __init__(self):
         self._plans: dict[str, list[MedicationPlan]] = {}
+        self._medication_audit_events: dict[str, list[MedicationPlanAuditEvent]] = {}
         self._vitals: dict[str, list[VitalReading]] = {}
         self._iot_events: dict[str, list[IoTEvent]] = {}
         self._doses: dict[tuple[str, str, str, str], DoseRecord] = {}
         self._notifications: dict[str, list[Notification]] = {}
 
     def seed_medication_plan(self, plan: MedicationPlan) -> None:
-        self._plans.setdefault(plan.user_id, []).append(plan)
+        plans = self._plans.setdefault(plan.user_id, [])
+        for index, existing in enumerate(plans):
+            if existing.med_id == plan.med_id:
+                plans[index] = plan
+                return
+        plans.append(plan)
 
     def get_medication_plans(self, user_id: str) -> list[MedicationPlan]:
         return list(self._plans.get(user_id, []))
+
+    def put_medication_audit_event(self, event: MedicationPlanAuditEvent) -> None:
+        events = self._medication_audit_events.setdefault(event.user_id, [])
+        for index, existing in enumerate(events):
+            if existing.event_id == event.event_id:
+                events[index] = event
+                return
+        events.append(event)
+
+    def list_medication_audit_events(
+        self, user_id: str, med_id: str | None = None
+    ) -> list[MedicationPlanAuditEvent]:
+        events = self._medication_audit_events.get(user_id, [])
+        return [event for event in events if med_id is None or event.med_id == med_id]
 
     def put_vital(self, vital: VitalReading) -> None:
         self._vitals.setdefault(vital.user_id, []).append(vital)

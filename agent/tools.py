@@ -35,8 +35,16 @@ def build_tools(repo, clock, user_id: str) -> list[StructuredTool]:
 
     def get_medication_plan() -> list[dict]:
         return [
-            {"med_id": p.med_id, "name": p.name, "dose": p.dose, "timing": p.timing}
-            for p in repo.get_medication_plans(user_id) if p.confirmed
+            {
+                "med_id": p.med_id,
+                "name": p.name,
+                "dose": p.dose,
+                "frequency": p.frequency,
+                "timing": p.timing,
+                "fixed_times": list(p.fixed_times),
+            }
+            for p in repo.get_medication_plans(user_id)
+            if p.is_active_at(clock.now)
         ]
 
     def record_dose_self_report(med_id: str, slot: str) -> dict:
@@ -66,7 +74,7 @@ def build_tools(repo, clock, user_id: str) -> list[StructuredTool]:
         ),
         StructuredTool.from_function(
             func=get_medication_plan, name="get_medication_plan",
-            description="取得已確認（confirmed）的用藥計畫列表",
+            description="取得已確認、已啟用且目前仍在有效期間內的用藥計畫列表",
         ),
         StructuredTool.from_function(
             func=record_dose_self_report, name="record_dose_self_report",

@@ -1,6 +1,12 @@
 from datetime import datetime
 
-from domain.models import DoseRecord, MedicationPlan, Notification, VitalReading
+from domain.models import (
+    DoseRecord,
+    MedicationPlan,
+    MedicationPlanAuditEvent,
+    Notification,
+    VitalReading,
+)
 from domain.states import DoseStatus
 from storage.memory_backend import InMemoryRepository
 
@@ -9,7 +15,7 @@ def make_plan():
     now = datetime(2026, 7, 17, 8, 0)
     return MedicationPlan(
         med_id="med-001", user_id="user-001", name="脈康錠 5mg", dose="1顆",
-        timing="AFTER_MEAL", valid_from=now, valid_to=None,
+        timing="AFTER_DINNER", valid_from=now, valid_to=None,
         confirmed=True, created_by="family-001", updated_at=now,
     )
 
@@ -55,3 +61,21 @@ def test_notifications_accumulate():
         reason="dose_missed", severity="medium", message="漏服",
     ))
     assert len(repo.list_notifications("user-001")) == 1
+
+
+def test_medication_audit_events_are_append_only_and_filterable():
+    repo = InMemoryRepository()
+    repo.put_medication_audit_event(MedicationPlanAuditEvent(
+        event_id="audit-001", user_id="user-001", med_id="med-001",
+        action="PLAN_CONFIRMED", actor_id="family-001",
+        occurred_at=datetime(2026, 7, 17, 17, 30), after={"confirmed": True},
+    ))
+    repo.put_medication_audit_event(MedicationPlanAuditEvent(
+        event_id="audit-002", user_id="user-001", med_id="med-002",
+        action="PLAN_CONFIRMED", actor_id="family-002",
+        occurred_at=datetime(2026, 7, 17, 17, 31), after={"confirmed": True},
+    ))
+
+    assert len(repo.list_medication_audit_events("user-001")) == 2
+    filtered = repo.list_medication_audit_events("user-001", "med-001")
+    assert [event.event_id for event in filtered] == ["audit-001"]

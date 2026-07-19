@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from app import trigger_meal_event
+from app import confirm_scanned_prescription, trigger_meal_event, trigger_prescription_scan
 from simulator.clock import SimClock
+from simulator.prescription_ocr import review_ocr_candidate
 from storage.memory_backend import InMemoryRepository
 
 
@@ -11,9 +12,16 @@ def test_meal_event_trigger_adds_proactive_chat_message():
     messages: list[tuple[str, str]] = []
     asked_event_ids: set[str] = set()
 
+    result = trigger_prescription_scan(clock, messages=[])
+    review_ocr_candidate(result, "med-001")
+    confirm_scanned_prescription(repo, result, "user-001", messages=[])
     trigger_meal_event(repo, clock, "user-001", messages, asked_event_ids)
 
-    assert messages == [("ai", "王伯伯，您吃完晚餐了嗎？")]
+    assert messages == [(
+        "ai",
+        "王伯伯，您吃完晚餐了嗎？ "
+        "吃完後請依已確認藥單服用：脈優錠 5mg 1顆（每日1次）。",
+    )]
     assert len(asked_event_ids) == 1
 
 
@@ -47,3 +55,20 @@ def test_meal_event_trigger_does_not_duplicate_message_on_repeated_call_with_sam
 
     assert result is None
     assert len(messages) == 1
+
+
+def test_scan_then_confirm_adds_auditable_chat_messages_and_plan():
+    repo = InMemoryRepository()
+    clock = SimClock.starting_at(datetime(2026, 7, 17, 17, 30))
+    messages: list[tuple[str, str]] = []
+
+    result = trigger_prescription_scan(clock, messages)
+    review_ocr_candidate(result, "med-001")
+    confirm_scanned_prescription(repo, result, "user-001", messages)
+
+    assert messages[0] == ("human", "📷（示範藥單，執行模擬 OCR）")
+    assert "OCR 辨識完成（模擬）" in messages[1][1]
+    assert "待家屬確認" in messages[1][1]
+    assert "家屬已確認藥單" in messages[2][1]
+    assert repo.get_medication_plans("user-001")[0].confirmed is True
+    assert len(repo.list_medication_audit_events("user-001")) == 3

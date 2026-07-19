@@ -10,12 +10,40 @@ class MedicationPlan:
     user_id: str
     name: str
     dose: str
-    timing: str  # "BEFORE_MEAL" | "AFTER_MEAL" | "FIXED_TIME"
+    # "BEFORE_BREAKFAST" | "AFTER_BREAKFAST" | "BEFORE_LUNCH" | "AFTER_LUNCH"
+    # | "BEFORE_DINNER" | "AFTER_DINNER" | "BEFORE_SLEEP" | "ON_WAKE" | "FIXED_TIME"
+    timing: str
     valid_from: datetime
     valid_to: datetime | None
     confirmed: bool
     created_by: str
     updated_at: datetime
+    frequency: str = ""
+    fixed_times: tuple[str, ...] = ()
+    active: bool = True
+    created_at: datetime | None = None
+    confirmed_by: str | None = None
+    confirmed_at: datetime | None = None
+
+    def is_active_at(self, at: datetime) -> bool:
+        return (
+            self.confirmed
+            and self.active
+            and self.valid_from <= at
+            and (self.valid_to is None or self.valid_to >= at)
+        )
+
+
+@dataclass
+class MedicationPlanAuditEvent:
+    event_id: str
+    user_id: str
+    med_id: str
+    action: str
+    actor_id: str
+    occurred_at: datetime
+    before: dict | None = None
+    after: dict | None = None
 
 
 @dataclass
@@ -42,7 +70,7 @@ class DoseRecord:
     user_id: str
     date: str  # "YYYY-MM-DD"
     med_id: str
-    slot: str  # "BREAKFAST" | "LUNCH" | "DINNER"
+    slot: str  # "BREAKFAST" | "LUNCH" | "DINNER" | "FIXED_HHMM"
     status: DoseStatus
     due_at: datetime
     reminded_at: datetime | None = None

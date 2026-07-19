@@ -17,7 +17,7 @@ def make_meal_event(event_id: str = "evt-001") -> IoTEvent:
 
 def make_plan(
     confirmed: bool = True,
-    timing: str = "AFTER_MEAL",
+    timing: str = "AFTER_DINNER",
     active: bool = True,
     valid_to: datetime | None = None,
 ) -> MedicationPlan:
@@ -53,7 +53,7 @@ def test_build_proactive_message_does_not_use_unconfirmed_ocr_candidate():
 
 
 def test_build_proactive_message_only_lists_after_meal_medication():
-    message = build_proactive_message(make_meal_event(), [make_plan(timing="BEFORE_MEAL")])
+    message = build_proactive_message(make_meal_event(), [make_plan(timing="BEFORE_DINNER")])
 
     assert message == "王伯伯，您吃完晚餐了嗎？"
 

@@ -11,7 +11,7 @@ def make_repo_with_fixtures(now: datetime) -> InMemoryRepository:
     repo = InMemoryRepository()
     repo.seed_medication_plan(MedicationPlan(
         med_id="med-001", user_id="user-001", name="脈康錠 5mg", dose="1顆",
-        timing="AFTER_MEAL", valid_from=now, valid_to=None,
+        timing="AFTER_DINNER", valid_from=now, valid_to=None,
         confirmed=True, created_by="family-001", updated_at=now,
     ))
     repo.put_vital(VitalReading(
@@ -59,7 +59,35 @@ def test_get_medication_plan_returns_confirmed_only():
 
     result = get_tool(tools, "get_medication_plan").invoke({})
 
-    assert result == [{"med_id": "med-001", "name": "脈康錠 5mg", "dose": "1顆", "timing": "AFTER_MEAL"}]
+    assert result == [{
+        "med_id": "med-001",
+        "name": "脈康錠 5mg",
+        "dose": "1顆",
+        "frequency": "",
+        "timing": "AFTER_DINNER",
+        "fixed_times": [],
+    }]
+
+
+def test_get_medication_plan_excludes_inactive_and_expired_plans():
+    now = datetime(2026, 7, 17, 18, 0)
+    repo = make_repo_with_fixtures(now)
+    repo.seed_medication_plan(MedicationPlan(
+        med_id="expired", user_id="user-001", name="過期藥物", dose="1顆",
+        timing="AFTER_DINNER", valid_from=datetime(2026, 7, 1),
+        valid_to=datetime(2026, 7, 16, 23, 59), confirmed=True,
+        created_by="family-001", updated_at=now,
+    ))
+    repo.seed_medication_plan(MedicationPlan(
+        med_id="inactive", user_id="user-001", name="停用藥物", dose="1顆",
+        timing="AFTER_DINNER", valid_from=datetime(2026, 7, 1), valid_to=None,
+        confirmed=True, created_by="family-001", updated_at=now, active=False,
+    ))
+    tools = build_tools(repo, SimClock.starting_at(now), "user-001")
+
+    result = get_tool(tools, "get_medication_plan").invoke({})
+
+    assert [plan["med_id"] for plan in result] == ["med-001"]
 
 
 def test_record_dose_self_report_updates_status():

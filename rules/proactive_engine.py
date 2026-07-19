@@ -14,7 +14,7 @@ def _active_after_meal_plans(
         plan
         for plan in medication_plans
         if plan.is_active_at(event.occurred_at)
-        and plan.timing == "AFTER_MEAL"
+        and plan.timing == "AFTER_DINNER"
     ]
 
 

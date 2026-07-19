@@ -6,8 +6,14 @@ from domain.models import MedicationPlan, MedicationPlanAuditEvent
 
 
 TIMING_LABELS = {
-    "BEFORE_MEAL": "飯前",
-    "AFTER_MEAL": "飯後",
+    "BEFORE_BREAKFAST": "早餐前",
+    "AFTER_BREAKFAST": "早餐後",
+    "BEFORE_LUNCH": "午餐前",
+    "AFTER_LUNCH": "午餐後",
+    "BEFORE_DINNER": "晚餐前",
+    "AFTER_DINNER": "晚餐後",
+    "BEFORE_SLEEP": "睡前",
+    "ON_WAKE": "醒來",
     "FIXED_TIME": "固定時間",
 }
 ALLOWED_TIMINGS = frozenset(TIMING_LABELS)
@@ -146,7 +152,7 @@ def simulate_prescription_ocr(clock, capture_source: str = "DEMO_SAMPLE") -> Pre
         med_id="med-001",
         name="脈優錠 5mg",
         dose="1顆",
-        timing="AFTER_MEAL",
+        timing="AFTER_DINNER",
         confidence=0.96,
         frequency="每日1次",
         valid_from=clock.now,
@@ -186,7 +192,7 @@ def validate_ocr_candidate(candidate: OCRMedicationCandidate) -> dict[str, str]:
     if not candidate.frequency.strip():
         errors["頻率"] = "必填"
     if candidate.timing not in ALLOWED_TIMINGS:
-        errors["服用時機"] = "只能選擇飯前、飯後或固定時間"
+        errors["服用時機"] = "服用時機選項不正確"
     if candidate.valid_from is None:
         errors["有效起日"] = "必填"
     if candidate.valid_to is None:
