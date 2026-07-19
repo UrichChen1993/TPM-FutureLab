@@ -396,8 +396,14 @@ def render_sidebar() -> None:
             st.session_state.messages, st.session_state.proactive_time_checkin_dates,
         )
     if st.sidebar.button("💊 模擬藥盒開啟＋重量下降", use_container_width=True):
-        simulate_pillbox_event(st.session_state.repo, st.session_state.clock, USER_ID, "med-001", "DINNER")
+        _, dose_record = simulate_pillbox_event(
+            st.session_state.repo, st.session_state.clock, USER_ID, "med-001", "DINNER"
+        )
         run_escalation_tick(st.session_state.repo, st.session_state.clock, USER_ID)
+        if dose_record is not None:
+            st.sidebar.success(f"感測器已確認服藥（{dose_record.slot}｜{dose_record.med_id}）")
+        else:
+            st.sidebar.warning("尚無今日對應的用藥排程，感測事件未套用到任何劑量紀錄")
 
     sim_time_placeholder.write(f"模擬時間：{st.session_state.clock.now.isoformat()}")
 
