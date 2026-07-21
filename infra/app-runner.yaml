@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: HomeWellness MVP on AWS App Runner with DynamoDB and least-privilege IAM.
+
+Parameters:
+  ServiceName:
+    Type: String
+    Default: homewellness-mvp
+    MinLength: 4
+    MaxLength: 40
+    AllowedPattern: "[A-Za-z0-9][A-Za-z0-9-_]{3,39}"
+  TableName:
+    Type: String
+    Default: homewellness-mvp
+  ImageIdentifier:
+    Type: String
+    Description: Full same-account ECR image URI including tag or digest.
+    AllowedPattern: "[0-9]{12}\\.dkr\\.ecr\\.[a-z0-9-]+\\.amazonaws\\.com/.+"
+  LlmProvider:
+    Type: String
+    Default: google_genai
+    AllowedValues:
+      - google_genai
+  LlmModel:
+    Type: String
+    Default: gemini-1.5-flash
+  LlmApiKeySecretArn:
+    Type: String
+    Default: ""
+    Description: Optional Secrets Manager secret ARN whose entire value is the Gemini API key.
+
+Conditions:
+  HasLlmApiKeySecret: !Not [!Equals [!Ref LlmApiKeySecretArn, ""]]
+
+Resources:
+  DynamoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Application
+          Value: homewellness
+        - Key: Environment
+          Value: demo
+
+  AppRunnerEcrAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: build.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+      Tags:
+        - Key: Application
+          Value: homewellness
+
+  AppRunnerInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: tasks.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: HomeWellnessDynamoDbAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                Resource: !GetAtt DynamoTable.Arn
+              - !If
+                - HasLlmApiKeySecret
+                - Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref LlmApiKeySecretArn
+                - !Ref AWS::NoValue
+      Tags:
+        - Key: Application
+          Value: homewellness
+
+  AppRunnerService:
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: !Ref ServiceName
+      SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerEcrAccessRole.Arn
+        AutoDeploymentsEnabled: true
+        ImageRepository:
+          ImageIdentifier: !Ref ImageIdentifier
+          ImageRepositoryType: ECR
+          ImageConfiguration:
+            Port: "8501"
+            RuntimeEnvironmentVariables:
+              - Name: DATA_BACKEND
+                Value: dynamodb
+              - Name: AWS_REGION
+                Value: !Ref AWS::Region
+              - Name: DYNAMODB_TABLE
+                Value: !Ref DynamoTable
+              - Name: LLM_PROVIDER
+                Value: !Ref LlmProvider
+              - Name: LLM_MODEL
+                Value: !Ref LlmModel
+            RuntimeEnvironmentSecrets: !If
+              - HasLlmApiKeySecret
+              - - Name: LLM_API_KEY
+                  Value: !Ref LlmApiKeySecretArn
+              - !Ref AWS::NoValue
+      InstanceConfiguration:
+        Cpu: 1 vCPU
+        Memory: 2 GB
+        InstanceRoleArn: !GetAtt AppRunnerInstanceRole.Arn
+      HealthCheckConfiguration:
+        Protocol: HTTP
+        Path: /_stcore/health
+        Interval: 10
+        Timeout: 5
+        HealthyThreshold: 1
+        UnhealthyThreshold: 5
+      Tags:
+        - Key: Application
+          Value: homewellness
+        - Key: Environment
+          Value: demo
+
+Outputs:
+  AppRunnerServiceArn:
+    Value: !GetAtt AppRunnerService.ServiceArn
+  AppRunnerServiceUrl:
+    Value: !Sub "https://${AppRunnerService.ServiceUrl}"
+  DynamoTableName:
+    Value: !Ref DynamoTable
+  DynamoTableArn:
+    Value: !GetAtt DynamoTable.Arn
+  AppRunnerInstanceRoleArn:
+    Value: !GetAtt AppRunnerInstanceRole.Arn

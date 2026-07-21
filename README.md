@@ -45,12 +45,16 @@ cp .env.example .env   # 開發模式預設值即可直接執行，無需修改
 
 1. 設定 AWS 憑證（CLI profile 或環境變數），執行一次：
    ```bash
-   .venv/Scripts/python scripts/create_dynamodb_table.py
+   .venv/Scripts/python -m scripts.create_dynamodb_table
    ```
 2. 在 `.env` 設定 `DATA_BACKEND=dynamodb`、`LLM_API_KEY=<gemini key>`。
 3. 重新啟動 `streamlit run app.py`，側欄應顯示 `Backend：dynamodb` 與正確的 Region。
 
 詳細步驟與 Live Demo 腳本見 [docs/demo-runbook.md](docs/demo-runbook.md)。
+
+## 部署到 AWS App Runner
+
+專案提供 `Dockerfile` 與 `infra/app-runner.yaml`。CloudFormation 會建立 DynamoDB、App Runner 的 ECR access role、最小權限 instance role、runtime 環境變數、Secrets Manager 引用及 App Runner service。完整的 ECR build/push、CloudFormation、seed 與驗證步驟見 [docs/aws-apprunner-deployment.md](docs/aws-apprunner-deployment.md)。
 
 ## 環境變數（`.env`）
 

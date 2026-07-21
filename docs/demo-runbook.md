@@ -11,7 +11,7 @@
 ## 取得憑證後的切換步驟
 
 1. AWS：設定 AWS CLI profile 或環境變數提供憑證，執行一次
-   `python scripts/create_dynamodb_table.py` 建立資料表，然後在 `.env`
+   `python -m scripts.create_dynamodb_table` 建立資料表，然後在 `.env`
    設定 `DATA_BACKEND=dynamodb`。
 2. Gemini：在 `.env` 設定 `LLM_API_KEY=<key>`；如需更換模型調整
    `LLM_MODEL`（依當時官方可用模型與額度確認，SRS 刻意未寫死版本）。

@@ -1,0 +1,16 @@
+.git
+.gitignore
+.venv
+__pycache__
+.pytest_cache
+*.py[cod]
+.env
+.agents
+.superpowers
+.codegraph
+docs
+output
+presentation
+tmp
+tests
+*.pdf
