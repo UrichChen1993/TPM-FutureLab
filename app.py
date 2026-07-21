@@ -4,7 +4,7 @@ import streamlit as st
 
 from agent.agent import build_agent_executor
 from config import load_settings
-from domain.states import NotificationSeverity
+from domain.states import SEVERITY_LABELS, NotificationSeverity
 from rules.escalation_engine import apply_escalation, ensure_today_doses
 from rules.proactive_engine import (
     maybe_trigger_proactive_message,
@@ -437,7 +437,8 @@ def render_sidebar() -> None:
     st.sidebar.subheader("家屬通知")
     for note in st.session_state.repo.list_notifications(USER_ID):
         render = st.sidebar.error if note.severity == NotificationSeverity.HIGH.value else st.sidebar.warning
-        render(f"[{note.severity}] {note.message}（{note.occurred_at.isoformat()}）")
+        severity_label = SEVERITY_LABELS.get(note.severity, note.severity)
+        render(f"[{severity_label}] {note.message}（{note.occurred_at.isoformat()}）")
 
 
 def render_chat() -> None:

@@ -35,6 +35,30 @@ _ESCALATION_MESSAGES = {
     NotificationSeverity.HIGH.value: "逾時未服藥（第2次提醒後仍未回應，已升級通知）",
 }
 
+_SLOT_LABELS = {
+    "BREAKFAST": "早餐",
+    "LUNCH": "午餐",
+    "DINNER": "晚餐",
+    "ON_WAKE": "起床時",
+    "BEFORE_SLEEP": "睡前",
+}
+
+
+def _slot_label(slot: str) -> str:
+    if slot in _SLOT_LABELS:
+        return _SLOT_LABELS[slot]
+    if slot.startswith("FIXED_") and len(slot) == len("FIXED_HHMM"):
+        hhmm = slot[len("FIXED_"):]
+        return f"{hhmm[:2]}:{hhmm[2:]}"
+    return slot
+
+
+def _medication_name(repo, user_id: str, med_id: str) -> str:
+    for plan in repo.get_medication_plans(user_id):
+        if plan.med_id == med_id:
+            return plan.name
+    return "用藥"
+
 
 @dataclass
 class EscalationResult:
@@ -90,7 +114,11 @@ def apply_escalation(repo, record: DoseRecord, now: datetime) -> EscalationResul
                 occurred_at=now,
                 reason=reason,
                 severity=result.notify_severity,
-                message=f"{record.med_id} {record.slot} {_ESCALATION_MESSAGES[result.notify_severity]}",
+                message=(
+                    f"{_medication_name(repo, record.user_id, record.med_id)}"
+                    f"（{_slot_label(record.slot)}）"
+                    f"{_ESCALATION_MESSAGES[result.notify_severity]}"
+                ),
             ))
 
     return result

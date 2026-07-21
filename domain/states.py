@@ -29,3 +29,12 @@ class NotificationSeverity(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+
+
+# Display-only Chinese labels; the enum values above stay English for internal
+# logic/audit (reason keys, storage) per the status-code convention in PRD.md.
+SEVERITY_LABELS = {
+    NotificationSeverity.LOW.value: "低",
+    NotificationSeverity.MEDIUM.value: "中",
+    NotificationSeverity.HIGH.value: "高",
+}
