@@ -1,6 +1,13 @@
 from abc import ABC, abstractmethod
 
-from domain.models import DoseRecord, IoTEvent, MedicationPlan, Notification, VitalReading
+from domain.models import (
+    DoseRecord,
+    IoTEvent,
+    MedicationPlan,
+    MedicationPlanAuditEvent,
+    Notification,
+    VitalReading,
+)
 
 
 class Repository(ABC):
@@ -9,6 +16,14 @@ class Repository(ABC):
 
     @abstractmethod
     def seed_medication_plan(self, plan: MedicationPlan) -> None: ...
+
+    @abstractmethod
+    def put_medication_audit_event(self, event: MedicationPlanAuditEvent) -> None: ...
+
+    @abstractmethod
+    def list_medication_audit_events(
+        self, user_id: str, med_id: str | None = None
+    ) -> list[MedicationPlanAuditEvent]: ...
 
     @abstractmethod
     def put_vital(self, vital: VitalReading) -> None: ...

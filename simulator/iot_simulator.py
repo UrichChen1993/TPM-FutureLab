@@ -2,6 +2,7 @@ import uuid
 
 from domain.models import DoseRecord, IoTEvent
 from domain.states import DoseStatus
+from rules.escalation_engine import ensure_today_doses
 
 
 def simulate_meal_area_event(repo, clock, user_id: str) -> IoTEvent:
@@ -23,6 +24,7 @@ def simulate_pillbox_event(
     )
     repo.put_iot_event(event)
 
+    ensure_today_doses(repo, clock, user_id)
     today = clock.now.strftime("%Y-%m-%d")
     record = repo.get_dose_record(user_id, today, med_id, slot)
     if record is not None and record.status != DoseStatus.SENSOR_SUPPORTED:

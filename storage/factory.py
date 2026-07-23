@@ -6,6 +6,11 @@ from storage.memory_backend import InMemoryRepository
 
 def get_repository() -> Repository:
     settings = load_settings()
-    if settings.data_backend == "dynamodb":
+    backend = settings.data_backend.strip().lower()
+    if backend == "dynamodb":
         return DynamoDBRepository(table_name=settings.dynamodb_table, region=settings.aws_region)
-    return InMemoryRepository()
+    if backend == "memory":
+        return InMemoryRepository()
+    raise ValueError(
+        f"Unsupported DATA_BACKEND={settings.data_backend!r}; expected 'memory' or 'dynamodb'"
+    )

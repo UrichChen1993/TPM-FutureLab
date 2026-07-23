@@ -10,9 +10,54 @@ from rules.config import (
     SECOND_REMINDER_DELAY_MINUTES,
 )
 
-SLOT_TIMES = {"BREAKFAST": time(8, 0), "LUNCH": time(12, 0), "DINNER": time(18, 0)}
+SLOT_TIMES = {
+    "BREAKFAST": time(8, 0),
+    "LUNCH": time(12, 0),
+    "DINNER": time(18, 0),
+    "ON_WAKE": time(7, 0),
+    "BEFORE_SLEEP": time(22, 0),
+}
+
+# Every meal-relative timing shares its meal's slot/due time; "before" vs "after"
+# only changes the wording used when talking to the user.
+TIMING_SLOTS = {
+    "BEFORE_BREAKFAST": "BREAKFAST", "AFTER_BREAKFAST": "BREAKFAST",
+    "BEFORE_LUNCH": "LUNCH", "AFTER_LUNCH": "LUNCH",
+    "BEFORE_DINNER": "DINNER", "AFTER_DINNER": "DINNER",
+    "BEFORE_SLEEP": "BEFORE_SLEEP",
+    "ON_WAKE": "ON_WAKE",
+}
 
 _DONE_STATUSES = (DoseStatus.SELF_REPORTED, DoseStatus.SENSOR_SUPPORTED)
+
+_ESCALATION_MESSAGES = {
+    NotificationSeverity.MEDIUM.value: "逾時未服藥（第1次提醒後未回應）",
+    NotificationSeverity.HIGH.value: "逾時未服藥（第2次提醒後仍未回應，已升級通知）",
+}
+
+_SLOT_LABELS = {
+    "BREAKFAST": "早餐",
+    "LUNCH": "午餐",
+    "DINNER": "晚餐",
+    "ON_WAKE": "起床時",
+    "BEFORE_SLEEP": "睡前",
+}
+
+
+def _slot_label(slot: str) -> str:
+    if slot in _SLOT_LABELS:
+        return _SLOT_LABELS[slot]
+    if slot.startswith("FIXED_") and len(slot) == len("FIXED_HHMM"):
+        hhmm = slot[len("FIXED_"):]
+        return f"{hhmm[:2]}:{hhmm[2:]}"
+    return slot
+
+
+def _medication_name(repo, user_id: str, med_id: str) -> str:
+    for plan in repo.get_medication_plans(user_id):
+        if plan.med_id == med_id:
+            return plan.name
+    return "用藥"
 
 
 @dataclass
@@ -69,27 +114,39 @@ def apply_escalation(repo, record: DoseRecord, now: datetime) -> EscalationResul
                 occurred_at=now,
                 reason=reason,
                 severity=result.notify_severity,
-                message=f"{record.med_id} {record.slot} 服藥狀態：{result.new_status.value}",
+                message=(
+                    f"{_medication_name(repo, record.user_id, record.med_id)}"
+                    f"（{_slot_label(record.slot)}）"
+                    f"{_ESCALATION_MESSAGES[result.notify_severity]}"
+                ),
             ))
 
     return result
 
 
 def ensure_today_doses(repo, clock, user_id: str) -> None:
-    """MVP scope: only AFTER_MEAL plans map to the DINNER slot.
-
-    ponytail: BEFORE_MEAL/FIXED_TIME mapping isn't demoed yet; extend
-    SLOT_TIMES/this function when those timings are actually needed.
-    """
+    """Create today's records for active plans, one per meal/sleep/wake slot or fixed time."""
     today = clock.now.strftime("%Y-%m-%d")
     for plan in repo.get_medication_plans(user_id):
-        if not plan.confirmed or plan.timing != "AFTER_MEAL":
+        if not plan.is_active_at(clock.now):
             continue
-        slot = "DINNER"
-        if repo.get_dose_record(user_id, today, plan.med_id, slot) is not None:
-            continue
-        due_at = datetime.combine(clock.now.date(), SLOT_TIMES[slot])
-        repo.put_dose_record(DoseRecord(
-            user_id=user_id, date=today, med_id=plan.med_id, slot=slot,
-            status=DoseStatus.SCHEDULED, due_at=due_at,
-        ))
+        schedules: list[tuple[str, time]] = []
+        slot = TIMING_SLOTS.get(plan.timing)
+        if slot is not None:
+            schedules.append((slot, SLOT_TIMES[slot]))
+        elif plan.timing == "FIXED_TIME":
+            for fixed_time in plan.fixed_times:
+                try:
+                    parsed_time = datetime.strptime(fixed_time, "%H:%M").time()
+                except ValueError:
+                    continue
+                schedules.append((f"FIXED_{fixed_time.replace(':', '')}", parsed_time))
+
+        for slot, due_time in schedules:
+            if repo.get_dose_record(user_id, today, plan.med_id, slot) is not None:
+                continue
+            due_at = datetime.combine(clock.now.date(), due_time)
+            repo.put_dose_record(DoseRecord(
+                user_id=user_id, date=today, med_id=plan.med_id, slot=slot,
+                status=DoseStatus.SCHEDULED, due_at=due_at,
+            ))

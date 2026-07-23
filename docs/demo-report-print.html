@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HomeWellness Companion - Demo Report</title>
+  <style>
+    :root {
+      --ink: #0b1218;
+      --muted: #56646e;
+      --rule: #cbd5da;
+      --accent: #168fbd;
+      --accent-soft: #e5f6fb;
+      --panel: #f2f5f6;
+      --warm: #f6ece3;
+      --font: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { background: #dfe5e8; }
+    body { margin: 0 auto; width: 210mm; background: white; color: var(--ink); font-family: var(--font); font-size: 10.5pt; line-height: 1.65; }
+    .cover { position: relative; display: flex; min-height: 297mm; padding: 28mm 20mm 22mm; flex-direction: column; justify-content: center; overflow: hidden; page-break-after: always; }
+    .cover::after { content: ""; position: absolute; top: 0; right: -46mm; width: 100mm; height: 100%; background: var(--accent-soft); transform: skewX(-18deg); transform-origin: top; z-index: 0; }
+    .cover > * { position: relative; z-index: 1; }
+    .cover .kicker { margin: 0 0 14mm; color: var(--accent); font-size: 10pt; font-weight: 800; letter-spacing: .18em; }
+    .cover h1 { max-width: 150mm; margin: 0; font-size: 34pt; line-height: 1.08; letter-spacing: -.03em; }
+    .cover .subtitle { max-width: 125mm; margin: 12mm 0 0; color: var(--muted); font-size: 16pt; line-height: 1.6; }
+    .cover .pillars { display: flex; gap: 5mm; margin-top: 22mm; }
+    .cover .pillars span { min-width: 35mm; padding-top: 3mm; border-top: .8mm solid var(--accent); font-size: 12pt; font-weight: 800; }
+    .cover .meta { position: absolute; left: 20mm; bottom: 20mm; color: var(--muted); font-size: 9pt; letter-spacing: .08em; }
+    .toc { padding: 18mm 18mm 14mm; page-break-after: always; }
+    .toc h2 { margin: 0 0 9mm; color: var(--ink); font-size: 24pt; }
+    .toc ol { columns: 2; column-gap: 12mm; margin: 0; padding-left: 0; list-style: none; }
+    .toc li { break-inside: avoid; margin: 0 0 4mm; padding-left: 1mm; color: var(--muted); }
+    .toc a { color: var(--ink); text-decoration: none; }
+    article { padding: 0 18mm 18mm; }
+    article > h2 { margin: 0 -18mm 8mm; padding: 16mm 18mm 6mm; border-bottom: 1px solid var(--rule); color: var(--ink); font-size: 23pt; line-height: 1.25; page-break-before: always; }
+    article > h2:first-of-type { page-break-before: auto; }
+    h3 { margin: 9mm 0 3mm; color: var(--accent); font-size: 15pt; line-height: 1.3; break-after: avoid; }
+    h4 { margin: 6mm 0 2mm; font-size: 12pt; break-after: avoid; }
+    p { margin: 0 0 4mm; }
+    ul, ol { margin: 0 0 5mm; padding-left: 7mm; }
+    li { margin: 1.2mm 0; }
+    blockquote { margin: 6mm 0; padding: 5mm 6mm; border-left: 1.4mm solid var(--accent); background: var(--accent-soft); font-size: 11pt; }
+    blockquote p:last-child { margin-bottom: 0; }
+    strong { font-weight: 800; }
+    code { padding: .4mm 1mm; border-radius: 1mm; background: #edf1f3; font-family: Consolas, "Courier New", monospace; font-size: 9pt; }
+    pre { margin: 5mm 0; padding: 5mm; border-left: 1mm solid var(--accent); background: #10171c; color: #eaf3f6; font-family: Consolas, "Courier New", monospace; font-size: 8pt; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; break-inside: avoid; }
+    pre code { padding: 0; background: transparent; color: inherit; }
+    table { width: 100%; margin: 5mm 0 7mm; border-collapse: collapse; font-size: 8.6pt; line-height: 1.45; }
+    thead { display: table-header-group; }
+    th { padding: 3mm; background: var(--ink); color: white; text-align: left; vertical-align: top; }
+    td { padding: 2.8mm 3mm; border-bottom: 1px solid var(--rule); vertical-align: top; }
+    tbody tr:nth-child(even) { background: var(--panel); }
+    tr { break-inside: avoid; }
+    a { color: #0c78a2; overflow-wrap: anywhere; }
+    .task-done, .task-open { display: inline-block; min-width: 5mm; font-weight: 900; }
+    .task-done { color: #16705d; }
+    .task-open { color: #9a572e; }
+    .error { margin: 25mm; padding: 8mm; background: var(--warm); color: #7f3f1d; }
+    .content-preview .cover, .content-preview .toc { display: none; }
+    .content-preview article { padding-top: 0; }
+    .content-preview article > h2 { page-break-before: auto; }
+    @page { size: A4; margin: 0; }
+    @media print {
+      html, body { width: 210mm; background: white; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .cover, .toc { width: 210mm; height: 297mm; }
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <p class="kicker">TPM FUTURE LAB · PRODUCT × AI × AWS</p>
+    <h1>HomeWellness<br>Companion</h1>
+    <p class="subtitle">主動式健康關懷與用藥提醒<br>產品設計、AI 工作流、AWS 架構與 MVP Demo 報告</p>
+    <div class="pillars"><span>主動</span><span>可信</span><span>可追溯</span></div>
+    <p class="meta">DEMO REPORT · INTERVIEW EDITION</p>
+  </section>
+  <nav class="toc" aria-label="目錄"><h2>目錄</h2><ol id="toc-list"></ol></nav>
+  <article id="report" aria-live="polite"></article>
+  <script>
+    const report = document.querySelector("#report");
+    const toc = document.querySelector("#toc-list");
+
+    function inline(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+        .replace(/^\[x\]\s*/i, '<span class="task-done">✓</span> ')
+        .replace(/^\[ \]\s*/, '<span class="task-open">□</span> ')
+        .replace(/ {2}$/g, "<br>");
+    }
+
+    function slug(text, index) {
+      const value = text.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").toLowerCase();
+      return value || `section-${index}`;
+    }
+
+    function renderMarkdown(markdown) {
+      const lines = markdown.replace(/\r/g, "").split("\n");
+      const html = [];
+      let i = 0;
+      let sectionIndex = 0;
+      let skippedTitle = false;
+
+      while (i < lines.length) {
+        const line = lines[i];
+        if (!line.trim()) { i += 1; continue; }
+
+        if (line.startsWith("```")) {
+          const language = line.slice(3).trim();
+          const code = [];
+          i += 1;
+          while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]);
+          i += 1;
+          html.push(`<pre data-language="${inline(language)}"><code>${inline(code.join("\n"))}</code></pre>`);
+          continue;
+        }
+
+        const heading = line.match(/^(#{1,4})\s+(.+)$/);
+        if (heading) {
+          const level = heading[1].length;
+          const title = heading[2].trim();
+          if (level === 1 && !skippedTitle) { skippedTitle = true; i += 1; continue; }
+          sectionIndex += 1;
+          const id = slug(title, sectionIndex);
+          html.push(`<h${level} id="${id}">${inline(title)}</h${level}>`);
+          if (level === 2) toc.insertAdjacentHTML("beforeend", `<li><a href="#${id}">${inline(title)}</a></li>`);
+          i += 1;
+          continue;
+        }
+
+        if (line.startsWith(">")) {
+          const quote = [];
+          while (i < lines.length && lines[i].startsWith(">")) quote.push(lines[i++].replace(/^>\s?/, ""));
+          html.push(`<blockquote><p>${inline(quote.join(" "))}</p></blockquote>`);
+          continue;
+        }
+
+        if (line.includes("|") && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1])) {
+          const splitRow = value => value.trim().replace(/^\||\|$/g, "").split("|").map(cell => cell.trim());
+          const headers = splitRow(line);
+          i += 2;
+          const rows = [];
+          while (i < lines.length && lines[i].includes("|") && lines[i].trim()) rows.push(splitRow(lines[i++]));
+          html.push(`<table><thead><tr>${headers.map(cell => `<th>${inline(cell)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${inline(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+          continue;
+        }
+
+        if (/^[-*]\s+/.test(line)) {
+          const items = [];
+          while (i < lines.length && /^[-*]\s+/.test(lines[i])) items.push(lines[i++].replace(/^[-*]\s+/, ""));
+          html.push(`<ul>${items.map(item => `<li>${inline(item)}</li>`).join("")}</ul>`);
+          continue;
+        }
+
+        if (/^\d+\.\s+/.test(line)) {
+          const items = [];
+          while (i < lines.length && /^\d+\.\s+/.test(lines[i])) items.push(lines[i++].replace(/^\d+\.\s+/, ""));
+          html.push(`<ol>${items.map(item => `<li>${inline(item)}</li>`).join("")}</ol>`);
+          continue;
+        }
+
+        const paragraph = [line.trim()];
+        i += 1;
+        while (i < lines.length && lines[i].trim() && !/^(#{1,4})\s+|^```|^>|^[-*]\s+|^\d+\.\s+/.test(lines[i])) {
+          if (lines[i].includes("|") && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1])) break;
+          paragraph.push(lines[i++].trim());
+        }
+        html.push(`<p>${inline(paragraph.join(" "))}</p>`);
+      }
+      report.innerHTML = html.join("\n");
+      document.body.dataset.ready = "true";
+      const requestedSection = Number(new URLSearchParams(location.search).get("section"));
+      if (requestedSection > 0) {
+        document.body.classList.add("content-preview");
+        const children = [...report.children];
+        const headings = children.filter(element => element.tagName === "H2");
+        const target = headings[requestedSection - 1];
+        let visible = false;
+        for (const element of children) {
+          if (element === target) visible = true;
+          else if (visible && element.tagName === "H2") visible = false;
+          element.hidden = !visible;
+        }
+      }
+    }
+
+    fetch("demo-report.md", { cache: "no-store" })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then(renderMarkdown)
+      .catch(error => {
+        report.innerHTML = `<p class="error">報告載入失敗：${inline(error.message)}</p>`;
+        document.body.dataset.ready = "error";
+      });
+  </script>
+</body>
+</html>
